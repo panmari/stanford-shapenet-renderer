@@ -53,31 +53,30 @@ scene = bpy.context.scene
 scene.render.resolution_x = 600
 scene.render.resolution_y = 600
 scene.render.resolution_percentage = 100
-# scene.render.alpha_mode = 'TRANSPARENT'
+scene.render.alpha_mode = 'TRANSPARENT'
 cam = scene.objects['Camera']
-# cam.location = Vector((0, 2, 2))
-# cam_constraint = cam.constraints.new(type='TRACK_TO')
-# cam_constraint.track_axis = 'TRACK_NEGATIVE_Z'
-# cam_constraint.up_axis = 'UP_Y'
+cam.location = Vector((0, 2, 2))
+cam_constraint = cam.constraints.new(type='TRACK_TO')
+cam_constraint.track_axis = 'TRACK_NEGATIVE_Z'
+cam_constraint.up_axis = 'UP_Y'
 b_empty = parent_obj_to_camera(cam)
-# cam_constraint.target=b_empty
+cam_constraint.target=b_empty
 
 fp = scene.render.filepath # get existing output path
 scene.render.image_settings.file_format = 'PNG' # set output format to .png
 
-import mathutils
 from math import radians
 
 
 num_steps = 30
 stepsize = 360.0 / num_steps
-mat_rot = mathutils.Matrix.Rotation(radians(stepsize), 4, 'Z')
+rotation_mode = 'XYZ'
 for i in range(0, num_steps):
     print("Rotation {}, {}".format((stepsize * i), radians(stepsize * i)))
 
-    scene.render.filepath = fp + 'r_{0:03d}'.format(i * stepsize)
+    scene.render.filepath = fp + 'r_{0:03d}'.format(int(i * stepsize))
     bpy.ops.render.render(write_still=True) # render still
     # This will only work if blender was started in GUI
     bpy.data.images['Viewer Node'].save_render(scene.render.filepath + "_depth.png")
 
-    b_empty.matrix_local *= mat_rot
+    b_empty.rotation_euler[2] += radians(stepsize)
