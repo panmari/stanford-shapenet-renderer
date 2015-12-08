@@ -1,7 +1,21 @@
 # A simple script that uses blender to render views of a single object by rotation the camera around it.
 # Also produces depth map at the same time.
+#
+# Example:
+# blender --background --python mytest.py -- --views 10 /path/to/my.obj
+#
 
-f = '/home/moser/Downloads/03001627/a09091780fcf3af2e9777a9dc292bbd2/model.obj'
+import argparse, sys
+parser = argparse.ArgumentParser(description='Renders given obj file by rotation a camera around it.')
+parser.add_argument('--views', type=int, default=30,
+                   help='number of views to be rendered')
+parser.add_argument('obj', type=str,
+                   help='Path to the obj file to be rendered.')
+
+argv = sys.argv[sys.argv.index("--") + 1:]
+args = parser.parse_args(argv)
+f = args.obj
+
 import bpy
 from mathutils import Vector
 
@@ -70,13 +84,11 @@ scene.render.image_settings.file_format = 'PNG' # set output format to .png
 
 from math import radians
 
-
-num_steps = 30
-stepsize = 360.0 / num_steps
+stepsize = 360.0 / args.views
 rotation_mode = 'XYZ'
 depthFileOutput.base_path = ''
 
-for i in range(0, num_steps):
+for i in range(0, args.views):
     print("Rotation {}, {}".format((stepsize * i), radians(stepsize * i)))
 
     scene.render.filepath = fp + 'r_{0:03d}'.format(int(i * stepsize))
