@@ -5,12 +5,14 @@
 # blender --background --python mytest.py -- --views 10 /path/to/my.obj
 #
 
-import argparse, sys
+import argparse, sys, os
 parser = argparse.ArgumentParser(description='Renders given obj file by rotation a camera around it.')
 parser.add_argument('--views', type=int, default=30,
                    help='number of views to be rendered')
 parser.add_argument('obj', type=str,
                    help='Path to the obj file to be rendered.')
+parser.add_argument('--output_folder', type=str, default='/tmp',
+                    help='The path the output will be dumped to.')
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 args = parser.parse_args(argv)
@@ -79,7 +81,8 @@ cam_constraint.up_axis = 'UP_Y'
 b_empty = parent_obj_to_camera(cam)
 cam_constraint.target=b_empty
 
-fp = scene.render.filepath # get existing output path
+model_identifier = os.path.split(os.path.split(args.obj)[0])[1]
+fp = os.path.join(args.output_folder, model_identifier)
 scene.render.image_settings.file_format = 'PNG' # set output format to .png
 
 from math import radians
