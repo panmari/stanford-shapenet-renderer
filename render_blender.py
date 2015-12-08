@@ -1,4 +1,7 @@
-f = '/home/moser/Downloads/02828884/1042d723dfc31ce5ec56aed2da084563/model.obj'
+# A simple script that uses blender to render views of a single object by rotation the camera around it.
+# Also produces depth map at the same time.
+
+f = '/home/moser/Downloads/03001627/a09091780fcf3af2e9777a9dc292bbd2/model.obj'
 import bpy
 from mathutils import Vector
 
@@ -15,7 +18,8 @@ for n in tree.nodes:
 rl = tree.nodes.new('CompositorNodeRLayers')
 
 map = tree.nodes.new(type="CompositorNodeMapValue")
-map.size = [0.08]
+# Size is chosen kind of arbitrarily, try out until you're satisfied with resulting depth map.
+map.size = [0.5]
 map.use_min = True
 map.min = [0]
 map.use_max = True
@@ -25,10 +29,9 @@ links.new(rl.outputs[2], map.inputs[0])
 invert = tree.nodes.new(type="CompositorNodeInvert")
 links.new(map.outputs[0], invert.inputs[1])
 
-depthViewer = tree.nodes.new(type="CompositorNodeViewer")
-links.new(invert.outputs[0], depthViewer.inputs[0])
-# Use alpha from input.
-links.new(rl.outputs[1], depthViewer.inputs[1])
+# create a file output node and set the path
+depthFileOutput = tree.nodes.new(type="CompositorNodeOutputFile")
+links.new(invert.outputs[0], depthFileOutput.inputs[0])
 
 # Delete default cube
 bpy.data.objects['Cube'].select = True
@@ -55,7 +58,7 @@ scene.render.resolution_y = 600
 scene.render.resolution_percentage = 100
 scene.render.alpha_mode = 'TRANSPARENT'
 cam = scene.objects['Camera']
-cam.location = Vector((0, 2, 2))
+cam.location = Vector((0, 1, 1))
 cam_constraint = cam.constraints.new(type='TRACK_TO')
 cam_constraint.track_axis = 'TRACK_NEGATIVE_Z'
 cam_constraint.up_axis = 'UP_Y'
@@ -71,12 +74,13 @@ from math import radians
 num_steps = 30
 stepsize = 360.0 / num_steps
 rotation_mode = 'XYZ'
+depthFileOutput.base_path = ''
+
 for i in range(0, num_steps):
     print("Rotation {}, {}".format((stepsize * i), radians(stepsize * i)))
 
     scene.render.filepath = fp + 'r_{0:03d}'.format(int(i * stepsize))
+    depthFileOutput.file_slots[0].path = scene.render.filepath + "_depth.png"
     bpy.ops.render.render(write_still=True) # render still
-    # This will only work if blender was started in GUI
-    bpy.data.images['Viewer Node'].save_render(scene.render.filepath + "_depth.png")
 
     b_empty.rotation_euler[2] += radians(stepsize)
