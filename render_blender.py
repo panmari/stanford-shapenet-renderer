@@ -56,6 +56,15 @@ bpy.ops.object.delete()
 
 
 bpy.ops.import_scene.obj(filepath=f)
+print(list())
+for object in bpy.context.scene.objects:
+    if object.name in ['Camera', 'Lamp']:
+        continue
+    bpy.context.scene.objects.active = object
+    # Some examples have duplicate vertices, these are removed here.
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.remove_doubles()
+    bpy.ops.object.mode_set(mode='OBJECT')
 
 def parent_obj_to_camera(b_camera):
     origin = (0,0,0)
