@@ -7,4 +7,4 @@ By default, this scripts generates 30 images by rotating the camera around the o
 
 To render a whole batch, you can e. g. use the unix tool find:
 
-    find . -name *.obj -exec blender --background --python render_blender.py --output_folder /tmp {} \;
+    find . -name *.obj -exec blender --background --python render_blender.py -- --output_folder /tmp {} \;
