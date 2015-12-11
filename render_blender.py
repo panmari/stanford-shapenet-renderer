@@ -66,6 +66,13 @@ for object in bpy.context.scene.objects:
     bpy.ops.mesh.remove_doubles()
     bpy.ops.object.mode_set(mode='OBJECT')
 
+# Make light just directional, disable shadows.
+lamp = bpy.data.lamps['Lamp']
+lamp.type = 'SUN'
+lamp.shadow_method = 'NOSHADOW'
+# Possibly disable specular shading:
+# lamp.use_specular = False
+
 def parent_obj_to_camera(b_camera):
     origin = (0,0,0)
     b_empty = bpy.data.objects.new("Empty", None)
@@ -91,7 +98,7 @@ b_empty = parent_obj_to_camera(cam)
 cam_constraint.target=b_empty
 
 model_identifier = os.path.split(os.path.split(args.obj)[0])[1]
-fp = os.path.join(args.output_folder, model_identifier)
+fp = os.path.join(args.output_folder, model_identifier, model_identifier)
 scene.render.image_settings.file_format = 'PNG' # set output format to .png
 
 from math import radians
@@ -103,7 +110,7 @@ depthFileOutput.base_path = ''
 for i in range(0, args.views):
     print("Rotation {}, {}".format((stepsize * i), radians(stepsize * i)))
 
-    scene.render.filepath = fp + 'r_{0:03d}'.format(int(i * stepsize))
+    scene.render.filepath = fp + '_r_{0:03d}'.format(int(i * stepsize))
     depthFileOutput.file_slots[0].path = scene.render.filepath + "_depth.png"
     bpy.ops.render.render(write_still=True) # render still
 
