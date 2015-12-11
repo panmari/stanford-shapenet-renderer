@@ -71,7 +71,7 @@ lamp = bpy.data.lamps['Lamp']
 lamp.type = 'SUN'
 lamp.shadow_method = 'NOSHADOW'
 # Possibly disable specular shading:
-# lamp.use_specular = False
+lamp.use_specular = False
 
 def parent_obj_to_camera(b_camera):
     origin = (0,0,0)
@@ -90,7 +90,7 @@ scene.render.resolution_y = 600
 scene.render.resolution_percentage = 100
 scene.render.alpha_mode = 'TRANSPARENT'
 cam = scene.objects['Camera']
-cam.location = Vector((0, 1, 1))
+cam.location = Vector((0, 1, 0.6))
 cam_constraint = cam.constraints.new(type='TRACK_TO')
 cam_constraint.track_axis = 'TRACK_NEGATIVE_Z'
 cam_constraint.up_axis = 'UP_Y'
