@@ -13,6 +13,10 @@ parser.add_argument('obj', type=str,
                    help='Path to the obj file to be rendered.')
 parser.add_argument('--output_folder', type=str, default='/tmp',
                     help='The path the output will be dumped to.')
+parser.add_argument('--remove_doubles', type=bool, default=True,
+                    help='Remove double vertices to improve mesh quality.')
+parser.add_argument('--edge_split', type=bool, default=True,
+                    help='Adds edge split filter.')
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 args = parser.parse_args(argv)
@@ -91,9 +95,15 @@ for object in bpy.context.scene.objects:
         continue
     bpy.context.scene.objects.active = object
     # Some examples have duplicate vertices, these are removed here.
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.mesh.remove_doubles()
-    bpy.ops.object.mode_set(mode='OBJECT')
+    if args.remove_doubles:
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.remove_doubles()
+        bpy.ops.object.mode_set(mode='OBJECT')
+    if args.edge_split:
+        bpy.ops.object.modifier_add(type='EDGE_SPLIT')
+        bpy.context.object.modifiers["EdgeSplit"].split_angle = 1.32645
+        bpy.ops.object.modifier_apply(apply_as='DATA', modifier="EdgeSplit")
+
 
 # Make light just directional, disable shadows.
 lamp = bpy.data.lamps['Lamp']
