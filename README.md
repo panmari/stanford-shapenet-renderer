@@ -3,7 +3,8 @@
 A little helper script to render .obj files (such as from the stanford shapenet database) with Blender.
 
 Tested on Linux, but should also work for other operating systems. 
-By default, this scripts generates 30 images by rotating the camera around the object. Additionally, the depth map is dumped.
+By default, this scripts generates 30 images by rotating the camera around the object. 
+Additionally, depth, albedo and normal maps are dumped for every image.
 
 To render a whole batch, you can e. g. use the unix tool find:
 
