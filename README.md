@@ -6,6 +6,15 @@ Tested on Linux, but should also work for other operating systems.
 By default, this scripts generates 30 images by rotating the camera around the object. 
 Additionally, depth, albedo and normal maps are dumped for every image.
 
+## Example invocation
+
+To render a single `.obj` file, run
+
+    blender --background --python render_blender.py -- --output_folder /tmp path_to_model.obj
+
+
+## Batch rendering
+
 To render a whole batch, you can e. g. use the unix tool find:
 
     find . -name *.obj -exec blender --background --python render_blender.py -- --output_folder /tmp {} \;
