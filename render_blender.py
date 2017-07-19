@@ -6,17 +6,20 @@
 #
 
 import argparse, sys, os
+
 parser = argparse.ArgumentParser(description='Renders given obj file by rotation a camera around it.')
 parser.add_argument('--views', type=int, default=30,
-                   help='number of views to be rendered')
+                    help='number of views to be rendered')
 parser.add_argument('obj', type=str,
-                   help='Path to the obj file to be rendered.')
+                    help='Path to the obj file to be rendered.')
 parser.add_argument('--output_folder', type=str, default='/tmp',
                     help='The path the output will be dumped to.')
 parser.add_argument('--remove_doubles', type=bool, default=True,
                     help='Remove double vertices to improve mesh quality.')
 parser.add_argument('--edge_split', type=bool, default=True,
                     help='Adds edge split filter.')
+parser.add_argument('--depth_scale', type=float, default=1.4,
+                    help='Scaling that is applied to depth. Depends on side of mesh. Try out various values until you get a good result.')
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 args = parser.parse_args(argv)
@@ -24,7 +27,6 @@ f = args.obj
 
 import bpy
 from mathutils import Vector
-
 
 # Set up rendering of depth map:
 bpy.context.scene.use_nodes = True
@@ -45,7 +47,7 @@ rl = tree.nodes.new('CompositorNodeRLayers')
 map = tree.nodes.new(type="CompositorNodeMapValue")
 # Size is chosen kind of arbitrarily, try out until you're satisfied with resulting depth map.
 map.offset = [-0.7]
-map.size = [1.4]
+map.size = [args.depth_scale]
 map.use_min = True
 map.min = [0]
 map.use_max = True
@@ -62,16 +64,15 @@ links.new(invert.outputs[0], depthFileOutput.inputs[0])
 
 scale_normal = tree.nodes.new(type="CompositorNodeMixRGB")
 scale_normal.blend_type = 'MULTIPLY'
-#scale_normal.use_alpha = True
+# scale_normal.use_alpha = True
 scale_normal.inputs[2].default_value = (0.5, 0.5, 0.5, 1)
 links.new(rl.outputs['Normal'], scale_normal.inputs[1])
 
 bias_normal = tree.nodes.new(type="CompositorNodeMixRGB")
 bias_normal.blend_type = 'ADD'
-#bias_normal.use_alpha = True
+# bias_normal.use_alpha = True
 bias_normal.inputs[2].default_value = (0.5, 0.5, 0.5, 0)
 links.new(scale_normal.outputs[0], bias_normal.inputs[1])
-
 
 normalFileOutput = tree.nodes.new(type="CompositorNodeOutputFile")
 normalFileOutput.label = 'Normal Output'
@@ -85,8 +86,6 @@ links.new(rl.outputs['Color'], albedoFileOutput.inputs[0])
 # Delete default cube
 bpy.data.objects['Cube'].select = True
 bpy.ops.object.delete()
-
-
 
 bpy.ops.import_scene.obj(filepath=f)
 print(list())
@@ -104,7 +103,6 @@ for object in bpy.context.scene.objects:
         bpy.context.object.modifiers["EdgeSplit"].split_angle = 1.32645
         bpy.ops.object.modifier_apply(apply_as='DATA', modifier="EdgeSplit")
 
-
 # Make light just directional, disable shadows.
 lamp = bpy.data.lamps['Lamp']
 lamp.type = 'SUN'
@@ -121,16 +119,18 @@ lamp2.energy = 0.015
 bpy.data.objects['Sun'].rotation_euler = bpy.data.objects['Lamp'].rotation_euler
 bpy.data.objects['Sun'].rotation_euler[0] += 180
 
+
 def parent_obj_to_camera(b_camera):
-    origin = (0,0,0)
+    origin = (0, 0, 0)
     b_empty = bpy.data.objects.new("Empty", None)
     b_empty.location = origin
-    b_camera.parent = b_empty #setup parenting
+    b_camera.parent = b_empty  # setup parenting
 
     scn = bpy.context.scene
     scn.objects.link(b_empty)
     scn.objects.active = b_empty
     return b_empty
+
 
 scene = bpy.context.scene
 scene.render.resolution_x = 600
@@ -143,11 +143,11 @@ cam_constraint = cam.constraints.new(type='TRACK_TO')
 cam_constraint.track_axis = 'TRACK_NEGATIVE_Z'
 cam_constraint.up_axis = 'UP_Y'
 b_empty = parent_obj_to_camera(cam)
-cam_constraint.target=b_empty
+cam_constraint.target = b_empty
 
 model_identifier = os.path.split(os.path.split(args.obj)[0])[1]
 fp = os.path.join(args.output_folder, model_identifier, model_identifier)
-scene.render.image_settings.file_format = 'PNG' # set output format to .png
+scene.render.image_settings.file_format = 'PNG'  # set output format to .png
 
 from math import radians
 
@@ -165,6 +165,6 @@ for i in range(0, args.views):
     normalFileOutput.file_slots[0].path = scene.render.filepath + "_normal.png"
     albedoFileOutput.file_slots[0].path = scene.render.filepath + "_albedo.png"
 
-    bpy.ops.render.render(write_still=True) # render still
+    bpy.ops.render.render(write_still=True)  # render still
 
     b_empty.rotation_euler[2] += radians(stepsize)
