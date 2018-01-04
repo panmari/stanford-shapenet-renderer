@@ -14,19 +14,19 @@ parser.add_argument('obj', type=str,
                     help='Path to the obj file to be rendered.')
 parser.add_argument('--output_folder', type=str, default='/tmp',
                     help='The path the output will be dumped to.')
+parser.add_argument('--scale', type=float, default=1,
+                    help='Scaling factor applied to model. Depends on size of mesh.')
 parser.add_argument('--remove_doubles', type=bool, default=True,
                     help='Remove double vertices to improve mesh quality.')
 parser.add_argument('--edge_split', type=bool, default=True,
                     help='Adds edge split filter.')
 parser.add_argument('--depth_scale', type=float, default=1.4,
-                    help='Scaling that is applied to depth. Depends on side of mesh. Try out various values until you get a good result.')
+                    help='Scaling that is applied to depth. Depends on size of mesh. Try out various values until you get a good result.')
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 args = parser.parse_args(argv)
-f = args.obj
 
 import bpy
-from mathutils import Vector
 
 # Set up rendering of depth map:
 bpy.context.scene.use_nodes = True
@@ -87,13 +87,14 @@ links.new(rl.outputs['Color'], albedoFileOutput.inputs[0])
 bpy.data.objects['Cube'].select = True
 bpy.ops.object.delete()
 
-bpy.ops.import_scene.obj(filepath=f)
-print(list())
+bpy.ops.import_scene.obj(filepath=args.obj)
 for object in bpy.context.scene.objects:
     if object.name in ['Camera', 'Lamp']:
         continue
     bpy.context.scene.objects.active = object
-    # Some examples have duplicate vertices, these are removed here.
+    if args.scale != 1:
+        bpy.ops.transform.resize(value=(args.scale,args.scale,args.scale))
+        bpy.ops.object.transform_apply(scale=True)
     if args.remove_doubles:
         bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.mesh.remove_doubles()
@@ -138,7 +139,7 @@ scene.render.resolution_y = 600
 scene.render.resolution_percentage = 100
 scene.render.alpha_mode = 'TRANSPARENT'
 cam = scene.objects['Camera']
-cam.location = Vector((0, 1, 0.6))
+cam.location = (0, 1, 0.6)
 cam_constraint = cam.constraints.new(type='TRACK_TO')
 cam_constraint.track_axis = 'TRACK_NEGATIVE_Z'
 cam_constraint.up_axis = 'UP_Y'
