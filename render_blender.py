@@ -22,6 +22,8 @@ parser.add_argument('--edge_split', type=bool, default=True,
                     help='Adds edge split filter.')
 parser.add_argument('--depth_scale', type=float, default=1.4,
                     help='Scaling that is applied to depth. Depends on size of mesh. Try out various values until you get a good result.')
+parser.add_argument('--color_depth', type=str, default='8',
+                    help='Number of bit per channel used for output. Either 8 or 16.')
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 args = parser.parse_args(argv)
@@ -36,6 +38,7 @@ links = tree.links
 # Add passes for additionally dumping albedo and normals.
 bpy.context.scene.render.layers["RenderLayer"].use_pass_normal = True
 bpy.context.scene.render.layers["RenderLayer"].use_pass_color = True
+bpy.context.scene.render.image_settings.color_depth = args.color_depth
 
 # Clear default nodes
 for n in tree.nodes:
@@ -50,9 +53,7 @@ map.offset = [-0.7]
 map.size = [args.depth_scale]
 map.use_min = True
 map.min = [0]
-map.use_max = True
-map.max = [255]
-links.new(rl.outputs['Z'], map.inputs[0])
+links.new(render_layers.outputs['Depth'], map.inputs[0])
 
 invert = tree.nodes.new(type="CompositorNodeInvert")
 links.new(map.outputs[0], invert.inputs[1])
