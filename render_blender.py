@@ -21,9 +21,11 @@ parser.add_argument('--remove_doubles', type=bool, default=True,
 parser.add_argument('--edge_split', type=bool, default=True,
                     help='Adds edge split filter.')
 parser.add_argument('--depth_scale', type=float, default=1.4,
-                    help='Scaling that is applied to depth. Depends on size of mesh. Try out various values until you get a good result.')
+                    help='Scaling that is applied to depth. Depends on size of mesh. Try out various values until you get a good result. Ignored if format is OPEN_EXR.')
 parser.add_argument('--color_depth', type=str, default='8',
                     help='Number of bit per channel used for output. Either 8 or 16.')
+parser.add_argument('--format', type=str, default='PNG',
+                    help='Format of files generated. Either PNG or OPEN_EXR')
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 args = parser.parse_args(argv)
@@ -38,6 +40,7 @@ links = tree.links
 # Add passes for additionally dumping albedo and normals.
 bpy.context.scene.render.layers["RenderLayer"].use_pass_normal = True
 bpy.context.scene.render.layers["RenderLayer"].use_pass_color = True
+bpy.context.scene.render.image_settings.file_format = args.format
 bpy.context.scene.render.image_settings.color_depth = args.color_depth
 
 # Clear default nodes
@@ -47,10 +50,21 @@ for n in tree.nodes:
 # Create input render layer node.
 render_layers = tree.nodes.new('CompositorNodeRLayers')
 
-# Create a file output node and set the path.
 depth_file_output = tree.nodes.new(type="CompositorNodeOutputFile")
 depth_file_output.label = 'Depth Output'
-links.new(render_layers.outputs['Depth'], depth_file_output.inputs[0])
+if args.format == 'OPEN_EXR':
+  links.new(render_layers.outputs['Depth'], depth_file_output.inputs[0])
+else:
+  # Remap as other types can not represent the full range of depth.
+  map = tree.nodes.new(type="CompositorNodeMapValue")
+  # Size is chosen kind of arbitrarily, try out until you're satisfied with resulting depth map.
+  map.offset = [-0.7]
+  map.size = [args.depth_scale]
+  map.use_min = True
+  map.min = [0]
+  links.new(render_layers.outputs['Depth'], map.inputs[0])
+
+  links.new(map.outputs[0], depth_file_output.inputs[0])
 
 scale_normal = tree.nodes.new(type="CompositorNodeMixRGB")
 scale_normal.blend_type = 'MULTIPLY'
