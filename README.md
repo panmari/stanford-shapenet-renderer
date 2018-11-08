@@ -14,7 +14,7 @@ To render a single `.obj` file, run
 
     blender --background --python render_blender.py -- --output_folder /tmp path_to_model.obj
 
-To get raw values that are easiest for further use, use `--format OPEN_EXR`.
+To get raw values that are easiest for further use, use `--format OPEN_EXR`. If the references any materials defined in a `.mtl` file, it is assumed to be in the same folder with the same name.
 
 ## Batch rendering
 
