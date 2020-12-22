@@ -41,9 +41,6 @@ context = bpy.context
 scene = bpy.context.scene
 render = bpy.context.scene.render
 
-scene.view_layers["View Layer"].use_pass_normal = True
-scene.view_layers["View Layer"].use_pass_diffuse_color = True
-
 render.engine = 'CYCLES' # ('CYCLES', 'BLENDER_EEVEE', ...)
 render.image_settings.color_mode = 'RGBA' # ('RGB', 'RGBA', ...)
 render.image_settings.color_depth = args.color_depth # ('8', '16')
@@ -53,7 +50,11 @@ render.resolution_y = args.resolution
 render.resolution_percentage = 100
 render.film_transparent = True
 
-bpy.context.scene.use_nodes = True
+scene.use_nodes = True
+scene.view_layers["View Layer"].use_pass_normal = True
+scene.view_layers["View Layer"].use_pass_diffuse_color = True
+scene.view_layers["View Layer"].use_pass_object_index = True
+
 nodes = bpy.context.scene.node_tree.nodes
 links = bpy.context.scene.node_tree.links
 
@@ -67,13 +68,15 @@ render_layers = nodes.new('CompositorNodeRLayers')
 # Create depth output nodes
 depth_file_output = nodes.new(type="CompositorNodeOutputFile")
 depth_file_output.label = 'Depth Output'
+depth_file_output.base_path = ''
+depth_file_output.file_slots[0].use_node_format = True
+depth_file_output.format.file_format = args.format
+depth_file_output.format.color_depth = args.color_depth
 if args.format == 'OPEN_EXR':
-    depth_file_output.format.file_format = 'OPEN_EXR'
     links.new(render_layers.outputs['Depth'], depth_file_output.inputs[0])
 else:
-    depth_file_output.format.file_format = "PNG"
     depth_file_output.format.color_mode = "BW"
-    depth_file_output.format.color_depth = '16'
+
     # Remap as other types can not represent the full range of depth.
     map = nodes.new(type="CompositorNodeMapValue")
     # Size is chosen kind of arbitrarily, try out until you're satisfied with resulting depth map.
@@ -81,26 +84,29 @@ else:
     map.size = [args.depth_scale]
     map.use_min = True
     map.min = [0]
+
     links.new(render_layers.outputs['Depth'], map.inputs[0])
     links.new(map.outputs[0], depth_file_output.inputs[0])
 
 # Create normal output nodes
-scale_normal = nodes.new(type="CompositorNodeMixRGB")
-scale_normal.blend_type = 'MULTIPLY'
-# scale_normal.use_alpha = True
-scale_normal.inputs[2].default_value = (0.5, 0.5, 0.5, 1)
-links.new(render_layers.outputs['Normal'], scale_normal.inputs[1])
+scale_node = nodes.new(type="CompositorNodeMixRGB")
+scale_node.blend_type = 'MULTIPLY'
+# scale_node.use_alpha = True
+scale_node.inputs[2].default_value = (0.5, 0.5, 0.5, 1)
+links.new(render_layers.outputs['Normal'], scale_node.inputs[1])
 
-bias_normal = nodes.new(type="CompositorNodeMixRGB")
-bias_normal.blend_type = 'ADD'
-# bias_normal.use_alpha = True
-bias_normal.inputs[2].default_value = (0.5, 0.5, 0.5, 0)
-links.new(scale_normal.outputs[0], bias_normal.inputs[1])
+bias_node = nodes.new(type="CompositorNodeMixRGB")
+bias_node.blend_type = 'ADD'
+# bias_node.use_alpha = True
+bias_node.inputs[2].default_value = (0.5, 0.5, 0.5, 0)
+links.new(scale_node.outputs[0], bias_node.inputs[1])
 
 normal_file_output = nodes.new(type="CompositorNodeOutputFile")
 normal_file_output.label = 'Normal Output'
+normal_file_output.base_path = ''
+normal_file_output.file_slots[0].use_node_format = True
 normal_file_output.format.file_format = args.format
-links.new(bias_normal.outputs[0], normal_file_output.inputs[0])
+links.new(bias_node.outputs[0], normal_file_output.inputs[0])
 
 # Create albedo output nodes
 alpha_albedo = nodes.new(type="CompositorNodeSetAlpha")
@@ -109,10 +115,33 @@ links.new(render_layers.outputs['Alpha'], alpha_albedo.inputs['Alpha'])
 
 albedo_file_output = nodes.new(type="CompositorNodeOutputFile")
 albedo_file_output.label = 'Albedo Output'
+albedo_file_output.base_path = ''
+albedo_file_output.file_slots[0].use_node_format = True
 albedo_file_output.format.file_format = args.format
 albedo_file_output.format.color_mode = 'RGBA'
 albedo_file_output.format.color_depth = args.color_depth
 links.new(alpha_albedo.outputs['Image'], albedo_file_output.inputs[0])
+
+# Create id map output nodes
+id_file_output = nodes.new(type="CompositorNodeOutputFile")
+id_file_output.label = 'ID Output'
+id_file_output.base_path = ''
+id_file_output.file_slots[0].use_node_format = True
+id_file_output.format.file_format = args.format
+id_file_output.format.color_depth = args.color_depth
+
+if args.format == 'OPEN_EXR':
+    links.new(render_layers.outputs['IndexOB'], id_file_output.inputs[0])
+else:
+    id_file_output.format.color_mode = 'BW'
+
+    divide_node = nodes.new(type='CompositorNodeMath')
+    divide_node.operation = 'DIVIDE'
+    divide_node.use_clamp = False
+    divide_node.inputs[1].default_value = 2**int(args.color_depth)
+
+    links.new(render_layers.outputs['IndexOB'], divide_node.inputs[0])
+    links.new(divide_node.outputs[0], id_file_output.inputs[0])
 
 # Delete default cube
 context.active_object.select_set(True)
@@ -142,6 +171,9 @@ if args.edge_split:
     bpy.ops.object.modifier_add(type='EDGE_SPLIT')
     context.object.modifiers["EdgeSplit"].split_angle = 1.32645
     bpy.ops.object.modifier_apply(modifier="EdgeSplit")
+
+# Set objekt IDs
+obj.pass_index = 1
 
 # Make light just directional, disable shadows.
 light = bpy.data.lights['Light']
@@ -185,9 +217,6 @@ model_identifier = os.path.split(os.path.split(args.obj)[0])[1]
 fp = os.path.join(os.path.abspath(args.output_folder), model_identifier, model_identifier)
 ext = "exr" if args.format == 'OPEN_EXR' else "png"
 
-for output_node in [depth_file_output, normal_file_output, albedo_file_output]:
-    output_node.base_path = ''
-
 for i in range(0, args.views):
     print("Rotation {}, {}".format((stepsize * i), math.radians(stepsize * i)))
 
@@ -195,16 +224,18 @@ for i in range(0, args.views):
     depth_file_path = render_file_path + "_depth." + ext
     normal_file_path = render_file_path + "_normal." + ext
     albedo_file_path = render_file_path + "_albedo." + ext
+    id_file_path = render_file_path + "_id." + ext
 
     scene.render.filepath = render_file_path
     depth_file_output.file_slots[0].path = depth_file_path
     normal_file_output.file_slots[0].path = normal_file_path
     albedo_file_output.file_slots[0].path = albedo_file_path
+    id_file_output.file_slots[0].path = id_file_path
 
     bpy.ops.render.render(write_still=True)  # render still
 
     # remove frame number from file names
-    for n in [depth_file_path, normal_file_path, albedo_file_path]:
+    for n in [depth_file_path, normal_file_path, albedo_file_path, id_file_path]:
         for n_old in glob(n+'*'):
             os.rename(n_old, n)
 
