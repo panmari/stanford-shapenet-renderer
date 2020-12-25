@@ -7,7 +7,7 @@
 # blender --background --python mytest.py -- --views 10 /path/to/my.obj
 #
 
-import argparse, sys, os, math
+import argparse, sys, os, math, re
 import bpy
 from glob import glob
 
@@ -215,30 +215,24 @@ rotation_mode = 'XYZ'
 
 model_identifier = os.path.split(os.path.split(args.obj)[0])[1]
 fp = os.path.join(os.path.abspath(args.output_folder), model_identifier, model_identifier)
-ext = "exr" if args.format == 'OPEN_EXR' else "png"
 
 for i in range(0, args.views):
     print("Rotation {}, {}".format((stepsize * i), math.radians(stepsize * i)))
 
     render_file_path = fp + '_r_{0:03d}'.format(int(i * stepsize))
-    depth_file_path = render_file_path + "_depth." + ext
-    normal_file_path = render_file_path + "_normal." + ext
-    albedo_file_path = render_file_path + "_albedo." + ext
-    id_file_path = render_file_path + "_id." + ext
 
     scene.render.filepath = render_file_path
-    depth_file_output.file_slots[0].path = depth_file_path
-    normal_file_output.file_slots[0].path = normal_file_path
-    albedo_file_output.file_slots[0].path = albedo_file_path
-    id_file_output.file_slots[0].path = id_file_path
+    depth_file_output.file_slots[0].path = render_file_path + "_depth"
+    normal_file_output.file_slots[0].path = render_file_path + "_normal"
+    albedo_file_output.file_slots[0].path = render_file_path + "_albedo"
+    id_file_output.file_slots[0].path = render_file_path + "_id"
 
     bpy.ops.render.render(write_still=True)  # render still
 
     # remove frame number from file names
-    for n in [depth_file_path, normal_file_path, albedo_file_path, id_file_path]:
-        for n_old in glob(n+'*'):
-            os.rename(n_old, n)
+    for n in glob(render_file_path+'_*'):
+        os.rename(n, re.sub(r'(\d+)\.([^\.]+)$', r'.\2', n))
 
     cam_empty.rotation_euler[2] += math.radians(stepsize)
 
-bpy.ops.wm.save_as_mainfile(filepath='debug.blend')
+#bpy.ops.wm.save_as_mainfile(filepath='debug.blend')
