@@ -32,6 +32,8 @@ parser.add_argument('--format', type=str, default='PNG',
                     help='Format of files generated. Either PNG or OPEN_EXR')
 parser.add_argument('--resolution', type=int, default=600,
                     help='Resolution of the images.')
+parser.add_argument('--engine', type=str, default='BLENDER_EEVEE',
+                    help='Blender internal engine for rendering. E.g. CYCLES, BLENDER_EEVEE, ...')
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 args = parser.parse_args(argv)
@@ -41,7 +43,7 @@ context = bpy.context
 scene = bpy.context.scene
 render = bpy.context.scene.render
 
-render.engine = 'CYCLES' # ('CYCLES', 'BLENDER_EEVEE', ...)
+render.engine = args.engine
 render.image_settings.color_mode = 'RGBA' # ('RGB', 'RGBA', ...)
 render.image_settings.color_depth = args.color_depth # ('8', '16')
 render.image_settings.file_format = args.format # ('PNG', 'OPEN_EXR', 'JPEG, ...)
@@ -229,10 +231,7 @@ for i in range(0, args.views):
 
     bpy.ops.render.render(write_still=True)  # render still
 
-    # remove frame number from file names
-    for n in glob(render_file_path+'_*'):
-        os.rename(n, re.sub(r'(\d+)\.([^\.]+)$', r'.\2', n))
-
     cam_empty.rotation_euler[2] += math.radians(stepsize)
 
+# For debugging the workflow
 #bpy.ops.wm.save_as_mainfile(filepath='debug.blend')
