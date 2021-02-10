@@ -4,9 +4,9 @@ A little helper script to render .obj files (such as from the stanford shapenet 
 
 Tested on Linux, but should also work for other operating systems.
 By default, this scripts generates 30 images by rotating the camera around the object.
-Additionally, depth, albedo and normal maps are dumped for every image.
+Additionally, depth, albedo, normal and id maps are dumped for every image.
 
-Tested with Blender 2.79.
+Tested with Blender 2.9
 
 ## Example invocation
 
