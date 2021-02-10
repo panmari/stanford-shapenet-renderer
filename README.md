@@ -31,3 +31,7 @@ To speed up the process, you can also use xargs to have multiple blender instanc
 Here is one chair model rendered with 30 different views:
 
 ![Chairs](examples/out_without_specular.png)
+
+or a teapot with all available outputs
+
+![Teapots](examples/teapot_all_outputs.jpg)
