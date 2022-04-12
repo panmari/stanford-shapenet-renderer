@@ -57,6 +57,8 @@ scene.view_layers["View Layer"].use_pass_normal = True
 scene.view_layers["View Layer"].use_pass_diffuse_color = True
 scene.view_layers["View Layer"].use_pass_object_index = True
 
+scene.view_settings.view_transform = 'Raw'
+
 nodes = bpy.context.scene.node_tree.nodes
 links = bpy.context.scene.node_tree.links
 
@@ -196,7 +198,7 @@ bpy.data.objects['Sun'].rotation_euler[0] += 180
 
 # Place camera
 cam = scene.objects['Camera']
-cam.location = (0, 1, 0.6)
+cam.location = (5, 6, 5.6)
 cam.data.lens = 35
 cam.data.sensor_width = 32
 
